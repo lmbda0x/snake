@@ -1,0 +1,11 @@
+[project]
+name = "2025-09-20-snakeraylib"
+version = "0.1.0"
+description = "Snake RL model"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "gymnasium>=1.2.0",
+    "numpy>=2.3.3",
+    "pybind11>=3.0.1",
+]
