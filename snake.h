@@ -25,5 +25,7 @@ void game_step(GameState *state, int action);
 void game_reset(GameState *state);
 void game_render(GameState *state);
 void game_clear(GameState *state);
+void render_init();
+void render_stop();
 SnakePart *createNode();
 #endif

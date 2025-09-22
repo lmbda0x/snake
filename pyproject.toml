@@ -8,4 +8,5 @@ dependencies = [
     "gymnasium>=1.2.0",
     "numpy>=2.3.3",
     "pybind11>=3.0.1",
+    "torch>=2.8.0",
 ]

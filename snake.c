@@ -4,15 +4,15 @@
 #include <stdlib.h>
 
 int randint(int limit) {
-  int n = rand() % limit + 1;
-  return (n - n % 40);
+  int cells = limit / 40;
+  int idx = rand() % cells;
+  return idx * 40;
 }
 
 void game_init(GameState *state) {
   state->width = WIDTH;
   state->height = HEIGHT;
-  Vector2 initPos = {(float)randint(state->height) / 2 - 40,
-                     (float)randint(state->width) / 2 - 40};
+  Vector2 initPos = {randint(state->height), randint(state->width)};
   Vector2 fPos = {randint(state->height), randint(state->width)};
   state->score = 0;
   state->gameOver = 0;
@@ -21,8 +21,10 @@ void game_init(GameState *state) {
   state->root->next = NULL;
   state->root->pos = initPos;
   state->fruitPosition = fPos;
-  InitWindow(WIDTH, HEIGHT, "LambdaSnake");
 }
+
+void render_init() { InitWindow(WIDTH, HEIGHT, "LambdaSnake"); }
+void render_stop() { CloseWindow(); }
 
 void game_clear(GameState *state) {
   while (state->root != NULL) {
@@ -33,10 +35,7 @@ void game_clear(GameState *state) {
   }
 }
 
-void game_reset(GameState *state) {
-  game_clear(state);
-  CloseWindow();
-}
+void game_reset(GameState *state) { game_clear(state); }
 
 void game_step(GameState *state, int action) {
   // Change direction to action for state for AI
@@ -47,16 +46,16 @@ void game_step(GameState *state, int action) {
   while (temp != NULL) {
     if (temp->next == NULL) {
       switch (action) {
-      case 0:
+      case 0: // right
         temp->pos.x += 40.0f;
         break;
-      case 1:
+      case 1: // leftj
         temp->pos.x -= 40.0f;
         break;
-      case 2:
+      case 2: // down
         temp->pos.y += 40.0f;
         break;
-      case 3:
+      case 3: // up
         temp->pos.y -= 40.0f;
         break;
       }
@@ -76,10 +75,8 @@ void game_step(GameState *state, int action) {
   if (head->pos.x == state->fruitPosition.x &&
       head->pos.y == state->fruitPosition.y) {
     state->score++;
-    int n1 = rand() % 800 + 1;
-    int n2 = rand() % 800 + 1;
-    state->fruitPosition.x = (n1 - n1 % 40);
-    state->fruitPosition.y = (n2 - n2 % 40);
+    state->fruitPosition.x = randint(state->width);
+    state->fruitPosition.y = randint(state->height);
     SnakePart *temp = createNode();
     switch (action) {
     case 0:
@@ -129,11 +126,12 @@ void game_render(GameState *state) {
   ClearBackground(RAYWHITE);
   DrawText("Hello X people :)", 260, 380, 40, LIGHTGRAY);
   DrawText(TextFormat("Score: %d", state->score), 20, 20, 20, LIGHTGRAY);
-  rlPushMatrix();
-  rlTranslatef(0, 25 * 40, 0);
-  rlRotatef(90, 1, 0, 0);
-  DrawGrid(80, 40);
-  rlPopMatrix();
+  for (int x = 0; x <= state->width; x += 40) {
+    DrawLine(x, 0, x, state->height, LIGHTGRAY);
+  }
+  for (int y = 0; y <= state->height; y += 40) {
+    DrawLine(0, y, state->width, y, LIGHTGRAY);
+  }
   SnakePart *part = state->root;
   DrawRectangleV(head->pos, size, GREEN);
   while (part->next != NULL) {
