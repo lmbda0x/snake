@@ -11,17 +11,17 @@ class QNet(nn.Module):
     def __init__(self, state_dim, action_dim):
         super().__init__()
 
-        self.conv1 = nn.Conv2d(4, 16, 3)
+        self.conv1 = nn.Conv2d(4, 8, 3)
         self.relu1 = nn.LeakyReLU()
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        self.conv2 = nn.Conv2d(16, 32, 3)
+        self.conv2 = nn.Conv2d(8, 16, 3)
         self.relu2 = nn.LeakyReLU()
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
 
         self.flatten = nn.Flatten()
 
-        self.fc1 = nn.Linear(32*4*4, 128)
+        self.fc1 = nn.Linear(16*4*4, 128)
         self.relu3 = nn.LeakyReLU()
         self.out = nn.Linear(128, action_dim)
         nn.init.xavier_uniform_(self.out.weight)
@@ -37,13 +37,14 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 snake = SnakeEnvWrapper()
 state_dim = 4*22*22
 action_dim = 4
-mem_buffer = deque(maxlen=500000)
+mem_buffer = deque(maxlen=300000)
+scores = deque(maxlen=10)
 policy_net = QNet(state_dim, action_dim).to(device)
 policy_net.load_state_dict(torch.load("pnet.pth"))
 target_net = QNet(state_dim, action_dim).to(device)
 target_net.load_state_dict(policy_net.state_dict())
-max_episodes = 1000000
-max_steps = 10000
+max_episodes = 100000
+max_steps = 1100
 mse = nn.MSELoss()
 optim = torch.optim.Adam(policy_net.parameters(), lr=1e-3)
 best_score = 0
@@ -71,33 +72,92 @@ def check_move(state, logits):
         logits[2] = -torch.inf
     return logits
 
+# for i in range(max_episodes):
+#     print("\nEPISODE: ", i, "Avg Score: ", np.array(scores).mean(), " \n")
+#     state = snake.get_state()
+#     for j in range(max_steps):
+#         epsilon = max(0.05, 1.0 - i / 5000)
+#         if random.random() < epsilon:
+#             idxs = []
+#             if state.canMoveRight:
+#                 idxs.append(0)
+#             if state.canMoveLeft:
+#                 idxs.append(1)
+#             if state.canMoveDown:
+#                 idxs.append(2)
+#             if state.canMoveUp:
+#                 idxs.append(3)
+#             action = idxs[random.randint(0, len(idxs) - 1)]
+#         else:
+#             board = torch.tensor(state.board, dtype=torch.long)
+#             one_hot = F.one_hot(board, num_classes=4).permute(2,0,1).unsqueeze(0).float().to(device)
+#             logits = policy_net(one_hot)
+#             logits = logits.squeeze(0)
+#             logits = check_move(state, logits)
+#             action = torch.argmax(logits).item()
+#         obs, rew, done, _ = snake.step(action)
+
+#         mem_buffer.append((state, action, rew, obs, done))
+#         if done == True:
+#             scores.append(snake.state.score)
+#             state = snake.reset()
+#             break
+#         else:
+#             state = obs
+
+#         if j % 32 == 0 and len(mem_buffer) >= 1000:
+#             batch_size = 32
+#             states, actions, rewards, next_states, dones = sample(mem_buffer, batch_size)
+#             q_values = policy_net(states)
+#             q_selected = q_values.gather(1, actions)
+
+#             with torch.no_grad():
+#                 q_next = target_net(next_states).max(1, keepdim=True)[0]
+#                 q_target = torch.where(dones.bool(), rewards, rewards + 0.99 * q_next)
+
+#             loss = mse(q_selected, q_target)
+
+#             optim.zero_grad()
+#             loss.backward()
+#             optim.step()
+#             tau = 0.005
+#             for target_param, param in zip(target_net.parameters(), policy_net.parameters()):
+#                 target_param.data.copy_(tau * param.data + (1.0 - tau) * target_param.data)
+#     if i % 500 == 0 and len(mem_buffer) >= 1000:
+#         batch_size = 256
+#         states, actions, rewards, next_states, dones = sample(mem_buffer, batch_size)
+#         q_values = policy_net(states)
+#         q_selected = q_values.gather(1, actions)
+
+#         with torch.no_grad():
+#             q_next = target_net(next_states).max(1, keepdim=True)[0]
+#             q_target = torch.where(dones.bool(), rewards, rewards + 0.99 * q_next)
+
+#         loss = mse(q_selected, q_target)
+
+#         optim.zero_grad()
+#         loss.backward()
+#         optim.step()
+#         tau = 0.005
+#         for target_param, param in zip(target_net.parameters(), policy_net.parameters()):
+#             target_param.data.copy_(tau * param.data + (1.0 - tau) * target_param.data)
+
+#     if i % 25 == 0:
+#         torch.save(policy_net.state_dict(), "pnet.pth")
+#         torch.save(target_net.state_dict(), "target_net.pth")
+
+
+# torch.save(target_net.state_dict(), "target_net.pth")
+# snake.reset()
+
+#render
 snake.render_init()
 for i in range(max_episodes):
     print("\nEPISODE: ", i, " \n")
     state = snake.get_state()
-    losses = []
     for j in range(max_steps):
         sleep(0.05)
         snake.render()
-        epsilon = max(0.05, 1.0 - i / 5000)
-        """if random.random() < epsilon:
-            idxs = []
-            if state.canMoveRight:
-                idxs.append(0)
-            if state.canMoveLeft:
-                idxs.append(1)
-            if state.canMoveDown:
-                idxs.append(2)
-            if state.canMoveUp:
-                idxs.append(3)
-            action = idxs[random.randint(0, len(idxs) - 1)]
-        else:
-            board = torch.tensor(state.board, dtype=torch.long)
-            one_hot = F.one_hot(board, num_classes=4).permute(2,0,1).unsqueeze(0).float().to(device)
-            logits = policy_net(one_hot)
-            logits = logits.squeeze(0)
-            logits = check_move(state, logits)
-            action = torch.argmax(logits).item()"""
         board = torch.tensor(state.board, dtype=torch.long)
         one_hot = F.one_hot(board, num_classes=4).permute(2,0,1).unsqueeze(0).float().to(device)
         logits = policy_net(one_hot)
@@ -110,38 +170,5 @@ for i in range(max_episodes):
         if done == True:
             state = snake.reset()
             break
-        else:
-            state = obs
-        if snake.state.score > best_score:
-            best_score = snake.state.score
-            #torch.save(policy_net.state_dict(), "best.pth")
-            #torch.save(target_net.state_dict(), "best_t.pth")
-        if j % 32 == 0 and len(mem_buffer) >= 1000:
-            batch_size = 32
-            states, actions, rewards, next_states, dones = sample(mem_buffer, batch_size)
-            q_values = policy_net(states)
-            q_selected = q_values.gather(1, actions)
-
-            with torch.no_grad():
-                q_next = target_net(next_states).max(1, keepdim=True)[0]
-                q_target = torch.where(dones.bool(), rewards, rewards + 0.99 * q_next)
-
-            loss = mse(q_selected, q_target)
-
-            optim.zero_grad()
-            loss.backward()
-            optim.step()
-            tau = 0.005
-            losses.append(loss.item())
-            for target_param, param in zip(target_net.parameters(), policy_net.parameters()):
-                target_param.data.copy_(tau * param.data + (1.0 - tau) * target_param.data)
-            print(f"Step: {j} Best Score: {best_score}Avg. Loss: {np.array(losses).mean()}", end='\r')
-
-    #if i % 25 == 0:
-        #torch.save(policy_net.state_dict(), "pnet.pth")
-    snake.reset()
 
 snake.render_stop()
-
-#torch.save(target_net.state_dict(), "target_net.pth")
-snake.reset()
