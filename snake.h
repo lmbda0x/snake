@@ -2,8 +2,8 @@
 #define SNAKE_H
 #include "raylib.h"
 
-#define WIDTH 800
-#define HEIGHT 800
+#define WIDTH 400
+#define HEIGHT 400
 
 typedef struct SnakePart {
   Vector2 pos;

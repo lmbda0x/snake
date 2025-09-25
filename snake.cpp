@@ -6,7 +6,7 @@ extern "C" {
 }
 
 struct State {
-  std::array<std::array<int, 22>, 22> board;
+  std::array<std::array<int, 12>, 12> board;
   bool canMoveRight;
   bool canMoveLeft;
   bool canMoveUp;
@@ -16,7 +16,7 @@ struct State {
 namespace py = pybind11;
 
 State get_game_state(GameState *state) {
-  std::array<std::array<int, 22>, 22> board{};
+  std::array<std::array<int, 12>, 12> board{};
   SnakePart *temp = state->root;
   int offset = 1;
   while (temp != NULL) {
@@ -86,9 +86,11 @@ PYBIND11_MODULE(snake_module, m) {
       .def_readonly("canMoveLeft", &State::canMoveLeft)
       .def_readonly("canMoveUp", &State::canMoveUp)
       .def_readonly("canMoveDown", &State::canMoveDown)
-        .def("__repr__", [](const State &s) {
-          return py::str("State(board={}, right?={}, left?={}, up?={}, down?={})").format(s.board, s.canMoveRight, s.canMoveLeft, s.canMoveUp, s.canMoveDown);
-        });
+      .def("__repr__", [](const State &s) {
+        return py::str("State(board={}, right?={}, left?={}, up?={}, down?={})")
+            .format(s.board, s.canMoveRight, s.canMoveLeft, s.canMoveUp,
+                    s.canMoveDown);
+      });
 
   py::class_<SnakePart>(m, "SnakePart")
       .def(py::init<>())

@@ -101,7 +101,7 @@ void game_step(GameState *state, int action) {
   }
 
   // Head goes out of game
-  if (head->pos.x >= 800 || head->pos.x < 0 || head->pos.y >= 800 ||
+  if (head->pos.x >= state->width || head->pos.x < 0 || head->pos.y >= state->height ||
       head->pos.y < 0) {
     state->gameOver = 1;
   }
